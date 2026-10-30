@@ -41,6 +41,8 @@ function doPost(e) {
                         return json(updateSettings_(req.settings));
       case 'saveMenu':  if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 바로 가기를 바꿀 수 있어요' };
                         return json(saveMenu_(req.menu));
+      case 'updateApp': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 수정할 수 있어요' };
+                        return json(updateApp_(req.id, req.fields));
       case 'addDept':   if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 부서를 만들 수 있어요' };
                         return json(addDept_(req.dept));
       default:          return json({ error: 'UNKNOWN_ACTION' });
@@ -144,6 +146,24 @@ function saveMenu_(list) {
       var a = new Array(w).fill(''); for (var k in idx) if (idx[k] >= 0) a[idx[k]] = r[k]; return a;
     }));
     return { ok: true, count: rows.length };
+  } finally { lock.releaseLock(); }
+}
+
+/* ───────── 페이지 정보 수정 (최고 관리자 · 지금은 담당자만) ───────── */
+var EDITABLE_APP_FIELDS = ['owner'];
+function updateApp_(id, fields) {
+  fields = fields || {};
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var t = table_(), all = t.sheet.getDataRange().getValues();
+    for (var i = 1; i < all.length; i++) {
+      if (String(all[i][t.idx.id]) !== String(id)) continue;
+      EDITABLE_APP_FIELDS.forEach(function (k) {
+        if (k in fields && t.idx[k] >= 0) t.sheet.getRange(i + 1, t.idx[k] + 1).setValue(String(fields[k] || '').trim().slice(0, 20));
+      });
+      return { ok: true };
+    }
+    throw { error: 'NOT_FOUND', message: '해당 페이지를 찾지 못했어요' };
   } finally { lock.releaseLock(); }
 }
 

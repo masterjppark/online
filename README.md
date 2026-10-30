@@ -23,7 +23,7 @@
 1. 이 저장소(`masterjppark/online`)의 `index.html`이 프론트엔드입니다
 2. `index.html` 맨 아래 스크립트의 `var API_URL = '';` 에 1-5의 주소 입력
 3. 저장소 Settings → Pages → Branch `main` / root → 저장
-4. `https://masterjppark.github.io/online/` 로 접속
+4. `https://on.yulpo.es.kr/` 로 접속 (CNAME으로 연결된 학교 도메인 · `masterjppark.github.io/online/`도 여기로 이동)
 
 `API_URL`이 비어 있으면 **시안 모드**로 내장 데이터(기존 62건)를 보여 줍니다.
 

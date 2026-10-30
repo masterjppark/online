@@ -39,6 +39,8 @@ function doPost(e) {
       case 'add':       auth_(req); return json(add_(req.item, req.who));
       case 'updateSettings': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 수정할 수 있어요' };
                         return json(updateSettings_(req.settings));
+      case 'saveMenu':  if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 바로 가기를 바꿀 수 있어요' };
+                        return json(saveMenu_(req.menu));
       case 'addDept':   if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 부서를 만들 수 있어요' };
                         return json(addDept_(req.dept));
       default:          return json({ error: 'UNKNOWN_ACTION' });
@@ -121,6 +123,28 @@ function updateSettings_(o) {
     sh.appendRow([k, val]);
   });
   return { ok: true };
+}
+
+/* ───────── 자주 쓰는 바로 가기 (최고 관리자) ─────────
+   MenuLinks 시트를 통째로 다시 씁니다. 아이콘 · 설명 열이 없으면 추가합니다. */
+function saveMenu_(list) {
+  if (!Array.isArray(list) || list.length > 12) throw { error: 'INVALID', message: '바로 가기는 12개까지 저장할 수 있어요' };
+  var rows = list.map(function (m) {
+    var name = String(m.name || '').trim().slice(0, 20), url = String(m.url || '').trim();
+    if (!name || !/^https?:\/\//.test(url)) throw { error: 'INVALID', message: '이름과 링크를 확인해 주세요' };
+    return { name: name, url: url, e: String(m.e || '').slice(0, 4), sub: String(m.sub || '').trim().slice(0, 30) };
+  });
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var sh = sheet_('MenuLinks'), head = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 2)).getValues()[0].map(function (h) { return String(h).trim(); });
+    ['메뉴명', 'URL 링크', '아이콘', '설명'].forEach(function (h) { if (head.indexOf(h) < 0) { var c = lastHeaderCol_(head) + 1; head[c] = h; sh.getRange(1, c + 1).setValue(h); } });
+    var w = head.length, idx = { name: head.indexOf('메뉴명'), url: head.indexOf('URL 링크'), e: head.indexOf('아이콘'), sub: head.indexOf('설명') };
+    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, w).clearContent();
+    if (rows.length) sh.getRange(2, 1, rows.length, w).setValues(rows.map(function (r) {
+      var a = new Array(w).fill(''); for (var k in idx) if (idx[k] >= 0) a[idx[k]] = r[k]; return a;
+    }));
+    return { ok: true, count: rows.length };
+  } finally { lock.releaseLock(); }
 }
 
 /* ───────── 부서 ───────── */

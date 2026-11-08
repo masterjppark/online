@@ -311,7 +311,9 @@ button.pin{font:inherit;color:var(--ink);cursor:pointer}
 .ibtn:hover{background:#fff;color:var(--ux-ink);box-shadow:0 0 0 1px var(--ux-line)}
 .ibtn.fav[aria-pressed="true"]{color:#f59e0b}
 .ibtn.fav[aria-pressed="true"]:active{transform:scale(1.3)}
-.ibtn.go{color:var(--primary)}
+.ibtn.go,.ibtn.info{color:var(--primary)}
+.ibtn.info{font-size:18px;font-weight:700}
+.row-main:hover b{color:var(--primary);text-decoration:underline;text-underline-offset:3px}
 .ibtn:focus-visible{outline:2px solid var(--ux-accent);outline-offset:1px}
 /* card grid view */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
@@ -321,7 +323,9 @@ button.pin{font:inherit;color:var(--ink);cursor:pointer}
 .card .bd{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
 .card b{font-size:15.5px;line-height:1.35}
 .card p{margin:0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.55}
-.card .ft{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px}
+.card .ft{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding:0 16px 14px}
+.card-main{display:flex;flex-direction:column;flex:1;padding:0;border:0;background:none;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.card-main:hover b{color:var(--primary)}
 .dup-flag{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px;padding:12px 16px;border-radius:var(--r-md);background:rgba(229,72,107,.08);border:1px solid rgba(229,72,107,.2);font-size:13.5px;color:#9f1239}
 .dup-flag b{display:block}
 
@@ -736,10 +740,10 @@ function rowHTML(a){
   var t=TYPES[a.type]||TYPES.web, fav=favs.indexOf(a.id)>=0;
   var who=ownerOk(a.owner)?'<span class="who"><i>'+esc(a.owner.charAt(0))+'</i>'+esc(a.owner)+'</span>':'<span class="who none">담당자 미지정</span>';
   return '<li class="row" data-id="'+esc(a.id)+'"><span class="ticon" style="--tc:'+t.c+'" aria-hidden="true">'+t.e+'</span>'
-    +'<button class="row-main" type="button" data-open="'+esc(a.id)+'"><b>'+esc(a.title)+'</b><small>'+esc(t.l)+(a.desc?' · '+esc(a.desc):'')+'</small></button>'
+    +'<button class="row-main" type="button" '+(a.url?'data-go':'data-open')+'="'+esc(a.id)+'" title="'+(a.url?'새 탭에서 바로 열기':'세부 사항 보기')+'"><b>'+esc(a.title)+'</b><small>'+esc(t.l)+(a.desc?' · '+esc(a.desc):'')+'</small></button>'
     +who
     +'<button class="ibtn fav" type="button" data-fav="'+esc(a.id)+'" aria-pressed="'+fav+'" aria-label="자주 쓰는 바로 가기에 추가">'+(fav?'★':'☆')+'</button>'
-    +'<button class="ibtn go" type="button" data-go="'+esc(a.id)+'" aria-label="'+esc(a.title)+' 새 탭에서 열기">↗</button></li>';
+    +'<button class="ibtn info" type="button" data-open="'+esc(a.id)+'" aria-label="'+esc(a.title)+' 세부 사항" title="세부 사항">ⓘ</button></li>';
 }
 function renderHome(){
   var st=S.settings, h='';
@@ -760,11 +764,11 @@ function renderHome(){
   var fl=favs.map(byId).filter(Boolean), rl=recents.map(byId).filter(Boolean).slice(0,8);
   /* ☆ 체크한 페이지 = 자주 쓰는 바로 가기 (이 기기에 저장) */
   h+='<section class="sec"><div class="sec-head"><div><small>FAVORITES</small><h2>⭐ 자주 쓰는 바로 가기</h2></div>'+(fl.length?'<span class="note">목록의 ☆로 넣고 빼요</span>':'')+'</div>';
-  h+=fl.length?'<div class="pins">'+fl.map(function(a){var t=TYPES[a.type]||TYPES.web;return '<button class="pin" type="button" data-open="'+esc(a.id)+'" title="'+esc(a.dept+' › '+(a.cat||'기타'))+'"><span class="em">'+t.e+'</span><span><b>'+esc(a.title)+'</b></span></button>'}).join('')+'</div>'
+  h+=fl.length?'<div class="pins">'+fl.map(function(a){var t=TYPES[a.type]||TYPES.web;return '<button class="pin" type="button" data-go="'+esc(a.id)+'" title="'+esc(a.dept+' › '+(a.cat||'기타'))+'"><span class="em">'+t.e+'</span><span><b>'+esc(a.title)+'</b></span></button>'}).join('')+'</div>'
     :'<div class="empty-hint">페이지 목록에서 ☆를 누르면 자주 쓰는 바로 가기에 모여요. (이 기기에 저장)</div>';
   h+='</section>';
   h+='<section class="sec"><div class="sec-head"><div><small>RECENT</small><h2>🕘 최근 본 페이지</h2></div></div>';
-  h+=rl.length?'<div class="chips">'+rl.map(function(a){return '<button class="mini" type="button" data-open="'+esc(a.id)+'">🕘 <span>'+esc(a.title)+'</span></button>'}).join('')+'</div>'
+  h+=rl.length?'<div class="chips">'+rl.map(function(a){return '<button class="mini" type="button" data-go="'+esc(a.id)+'" title="새 탭에서 바로 열기">🕘 <span>'+esc(a.title)+'</span></button>'}).join('')+'</div>'
     :'<div class="empty-hint">페이지를 열어 보면 여기에 최근 본 순서대로 모여요.</div>';
   h+='</section>';
   h+='<section class="sec"><div class="sec-head"><div><small>DEPARTMENTS</small><h2>🧭 부서별 업무</h2></div><span class="note">총 '+S.apps.length+'개 페이지</span></div><div class="depts">';
@@ -901,7 +905,7 @@ function renderDept(name){
     +'<button class="btn btn-ghost" type="button" data-add-here="'+esc(name)+'">＋ 이 부서에 페이지 등록</button></div>';
   if(!list.length){ h+='<div class="empty-hint">아직 등록된 페이지가 없어요. 링크 하나만 붙여 넣으면 바로 만들어져요.</div>'; view.innerHTML=h; return; }
   if(S.view==='card'){
-    h+='<div class="cards">'+list.map(function(a){var t=TYPES[a.type]||TYPES.web;return '<button class="card" type="button" data-open="'+esc(a.id)+'"><span class="th" style="--g:'+t.c+'">'+t.e+'</span><span class="bd"><span class="chips"><span class="tag blue">'+esc(a.cat||'기타')+'</span>'+(ownerOk(a.owner)?'<span class="tag">👤 '+esc(a.owner)+'</span>':'')+'</span><b>'+esc(a.title)+'</b><p>'+esc(a.desc||'설명이 없습니다.')+'</p><span class="ft"><small style="color:var(--muted)">'+t.l+'</small><span class="tag blue">자세히 →</span></span></span></button>'}).join('')+'</div>';
+    h+='<div class="cards">'+list.map(function(a){var t=TYPES[a.type]||TYPES.web;return '<div class="card"><button class="card-main" type="button" '+(a.url?'data-go':'data-open')+'="'+esc(a.id)+'" title="'+(a.url?'새 탭에서 바로 열기':'세부 사항 보기')+'"><span class="th" style="--g:'+t.c+'">'+t.e+'</span><span class="bd"><span class="chips"><span class="tag blue">'+esc(a.cat||'기타')+'</span>'+(ownerOk(a.owner)?'<span class="tag">👤 '+esc(a.owner)+'</span>':'')+'</span><b>'+esc(a.title)+'</b><p>'+esc(a.desc||'설명이 없습니다.')+'</p></span></button><span class="ft"><small style="color:var(--muted)">'+t.l+'</small><button class="tag blue" type="button" data-open="'+esc(a.id)+'" style="border:0;cursor:pointer">ⓘ 세부 사항</button></span></div>'}).join('')+'</div>';
     view.innerHTML=h; return;
   }
   /* Lucian #044 아코디언: 한 번에 한 카테고리만 펼침 · 5개 넘으면 '더 보기' */
@@ -1107,8 +1111,8 @@ function syncMe(){
     if(S.role==='admin'){out.push({g:'바로 하기',n:'새 부서 만들기',ic:'🏗️',c:'#e8eefc',run:function(){openDeptForm()}});out.push({g:'바로 하기',n:'주요 메뉴 관리',ic:'📌',c:'#fff1d6',run:function(){openPinEditor()}})}
     else out.push({g:'바로 하기',n:'최고 관리자 로그인',ic:'🔐',c:'#f1f1f4',run:function(){openMe(true)}});
     DEPTS.forEach(function(d){out.push({g:'부서로 이동',n:d.n,ic:d.e,c:d.c,run:function(){go({v:'dept',d:d.n})}})});
-    S.apps.forEach(function(a){var t=TYPES[a.type]||TYPES.web;out.push({g:'페이지',n:a.title,sub:a.dept+(ownerOk(a.owner)?' · '+a.owner:''),ic:t.e,c:t.c,hay:(a.title+' '+a.dept+' '+a.cat+' '+a.owner+' '+a.desc).toLowerCase(),run:function(){showDetail(a.id,currentList(a))}})});
-    if(!q) return out.filter(function(o){return o.g!=='페이지'}).concat(recents.map(byId).filter(Boolean).slice(0,5).map(function(a){var t=TYPES[a.type]||TYPES.web;return{g:'최근 본 페이지',n:a.title,sub:a.dept,ic:t.e,c:t.c,run:function(){showDetail(a.id,currentList(a))}}}));
+    S.apps.forEach(function(a){var t=TYPES[a.type]||TYPES.web;out.push({g:'페이지',n:a.title,sub:a.dept+(ownerOk(a.owner)?' · '+a.owner:''),ic:t.e,c:t.c,hay:(a.title+' '+a.dept+' '+a.cat+' '+a.owner+' '+a.desc).toLowerCase(),run:function(){openPage(a.id)}})});
+    if(!q) return out.filter(function(o){return o.g!=='페이지'}).concat(recents.map(byId).filter(Boolean).slice(0,5).map(function(a){var t=TYPES[a.type]||TYPES.web;return{g:'최근 본 페이지',n:a.title,sub:a.dept,ic:t.e,c:t.c,run:function(){openPage(a.id)}}}));
     return out.filter(function(o){return (o.hay||o.n.toLowerCase()).indexOf(q)>=0}).slice(0,40);
   }
   function render(){
@@ -1230,6 +1234,14 @@ function editOwner(btn){
   }
   inp.addEventListener('keydown',function(e){if(e.isComposing||e.keyCode===229)return;if(e.key==='Enter'){e.preventDefault();save()}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();back()}});
   inp.addEventListener('blur',function(){setTimeout(function(){if(!busy&&document.activeElement!==inp)save()},120)});
+}
+/* 이름을 누르면 바로 열기 · 링크가 없는 항목은 상세 패널 */
+function openPage(id){
+  var a=byId(id); if(!a) return;
+  if(!a.url){showDetail(id);return}
+  recents=[a.id].concat(recents.filter(function(r){return r!==a.id})).slice(0,12); store.set('recents',recents);
+  openUrl(a.url,a.title);
+  if(S.route.v==='home'&&!P.isOpen()) setTimeout(render,300);
 }
 function dupOf(a){return a.hash?S.apps.filter(function(o){return o.id!==a.id&&o.hash===a.hash}):[]}
 function currentList(a){
@@ -1385,7 +1397,7 @@ document.addEventListener('click',function(e){
   var op=e.target.closest('[data-own]'); if(op){editOwner(op);return}
   if(!t) return;
   if(t.hasAttribute('data-open')) showDetail(t.getAttribute('data-open'));
-  else if(t.hasAttribute('data-go')){var a=byId(t.getAttribute('data-go'));if(a){recents=[a.id].concat(recents.filter(function(r){return r!==a.id})).slice(0,12);store.set('recents',recents);openUrl(a.url,a.title)}}
+  else if(t.hasAttribute('data-go')){openPage(t.getAttribute('data-go'))}
   else if(t.hasAttribute('data-fav')){
     var id=t.getAttribute('data-fav'),on=favs.indexOf(id)<0;
     favs=on?favs.concat(id):favs.filter(function(f){return f!==id}); store.set('favs',favs);

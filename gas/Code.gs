@@ -87,6 +87,7 @@ function bootstrap_() {
   var safe = {};
   ['schoolName', 'mainTitle', 'showNotice', 'noticeText', 'themeColor', 'adminContact'].forEach(function (k) { safe[k] = s[k]; });
   safe.showNotice = String(s.showNotice).toUpperCase() !== 'FALSE';
+  try { safe.notices = s.notices ? JSON.parse(s.notices) : []; } catch (e) { safe.notices = []; }
   return { settings: safe, menu: menu_(), apps: apps_(), depts: depts_() };
 }
 function settings_() {
@@ -114,13 +115,15 @@ function apps_() {
 }
 
 /* ───────── 설정 수정 (최고 관리자 · 공지사항) ───────── */
-var EDITABLE_SETTINGS = ['noticeText', 'showNotice'];
+var EDITABLE_SETTINGS = ['noticeText', 'showNotice', 'notices'];
 function updateSettings_(o) {
   o = o || {};
   var sh = sheet_('Settings'), v = sh.getDataRange().getValues();
   EDITABLE_SETTINGS.forEach(function (k) {
     if (!(k in o)) return;
-    var val = k === 'showNotice' ? (o[k] ? 'TRUE' : 'FALSE') : String(o[k]).slice(0, 80);
+    var val = k === 'showNotice' ? (o[k] ? 'TRUE' : 'FALSE')
+            : k === 'notices' ? JSON.stringify((Array.isArray(o[k]) ? o[k] : []).slice(0, 10).map(function (n) { return { text: String(n.text || '').trim().slice(0, 120), show: n.show !== false }; }).filter(function (n) { return n.text; }))
+            : String(o[k]).slice(0, 120);
     for (var i = 0; i < v.length; i++) if (String(v[i][0]).trim() === k) { sh.getRange(i + 1, 2).setValue(val); return; }
     sh.appendRow([k, val]);
   });

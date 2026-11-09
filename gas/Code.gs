@@ -43,6 +43,8 @@ function doPost(e) {
                         return json(saveMenu_(req.menu));
       case 'updateApp': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 수정할 수 있어요' };
                         return json(updateApp_(req.id, req.fields));
+      case 'deleteApp': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 페이지를 삭제할 수 있어요' };
+                        return json(deleteApp_(req.id));
       case 'saveDepts': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 부서 메뉴를 바꿀 수 있어요' };
                         return json(saveDepts_(req.depts));
       case 'addDept':   if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 부서를 만들 수 있어요' };
@@ -169,6 +171,25 @@ function updateApp_(id, fields) {
       return { ok: true };
     }
     throw { error: 'NOT_FOUND', message: '해당 페이지를 찾지 못했어요' };
+  } finally { lock.releaseLock(); }
+}
+
+/* ───────── 페이지 삭제 (최고 관리자) ─────────
+   Apps 시트에서 행을 지우기 전에 '삭제됨' 시트에 그대로 복사해 두므로, 필요하면 다시 옮겨 붙여 되살릴 수 있어요. */
+function deleteApp_(id) {
+  if (!id) throw { error: 'INVALID', message: '삭제할 페이지를 찾지 못했어요' };
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var t = table_(), all = t.sheet.getDataRange().getValues();
+    for (var i = 1; i < all.length; i++) {
+      if (String(all[i][t.idx.id]) !== String(id)) continue;
+      var ss = SpreadsheetApp.openById(SHEET_ID), bin = ss.getSheetByName('삭제됨');
+      if (!bin) { bin = ss.insertSheet('삭제됨'); bin.appendRow(all[0].concat(['삭제일'])); bin.setFrozenRows(1); }
+      bin.appendRow(all[i].concat([new Date()]));
+      t.sheet.deleteRow(i + 1);
+      return { ok: true, id: String(id) };
+    }
+    throw { error: 'NOT_FOUND', message: '해당 페이지를 찾지 못했어요 (이미 삭제됐을 수 있어요)' };
   } finally { lock.releaseLock(); }
 }
 

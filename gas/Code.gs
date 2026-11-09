@@ -43,6 +43,8 @@ function doPost(e) {
                         return json(saveMenu_(req.menu));
       case 'updateApp': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 수정할 수 있어요' };
                         return json(updateApp_(req.id, req.fields));
+      case 'saveDepts': if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 부서 메뉴를 바꿀 수 있어요' };
+                        return json(saveDepts_(req.depts));
       case 'addDept':   if (auth_(req) !== 'admin') throw { error: 'FORBIDDEN', message: '최고 관리자만 부서를 만들 수 있어요' };
                         return json(addDept_(req.dept));
       default:          return json({ error: 'UNKNOWN_ACTION' });
@@ -187,6 +189,38 @@ function depts_() {
   return v.filter(function (r) { return r[0]; })
     .sort(function (a, b) { return (Number(a[4]) || 999) - (Number(b[4]) || 999); })
     .map(function (r) { return { name: String(r[0]), group: String(r[1] || '기타'), icon: String(r[2] || '📌'), color: String(r[3] || '#eef1f6') }; });
+}
+/* 부서 메뉴 편집: Depts 시트를 순서대로 다시 쓰고, 이름이 바뀐 부서는 Apps 시트의 부서명도 함께 바꿉니다 */
+function saveDepts_(list) {
+  if (!Array.isArray(list) || !list.length || list.length > 40) throw { error: 'INVALID', message: '부서 목록을 확인해 주세요' };
+  var norm = function (x) { return String(x).replace(/\s+/g, '').toLowerCase(); }, seen = {};
+  var rows = list.map(function (d, i) {
+    var name = String(d.name || '').trim().slice(0, 12), group = String(d.group || '').trim().slice(0, 10) || '기타';
+    if (!name) throw { error: 'INVALID', message: (i + 1) + '번째 부서 이름이 비어 있어요' };
+    if (seen[norm(name)]) throw { error: 'DUPLICATE_DEPT', message: '‘' + name + '’ 이름이 겹쳐요' };
+    seen[norm(name)] = 1;
+    return { name: name, old: String(d.old || '').trim(), group: group, icon: String(d.icon || '📌').slice(0, 4), color: String(d.color || DEPT_COLORS[i % 4]) };
+  });
+  var lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    var t = table_(), all = t.sheet.getDataRange().getValues(), col = t.idx.dept, kept = {};
+    rows.forEach(function (r) { kept[r.old || r.name] = 1; });
+    // 페이지가 있는 부서는 지우지 않도록 확인
+    for (var i = 1; i < all.length; i++) {
+      var dn = String(all[i][col] || '').trim();
+      if (dn && !kept[dn] && !rows.some(function (r) { return r.name === dn; }) && depts_().some(function (d) { return d.name === dn; }))
+        throw { error: 'IN_USE', message: '‘' + dn + '’ 부서에 페이지가 있어 삭제할 수 없어요' };
+    }
+    // 이름 변경 → 페이지 부서명 함께 변경
+    rows.forEach(function (r) {
+      if (!r.old || r.old === r.name) return;
+      for (var i = 1; i < all.length; i++) if (String(all[i][col]).trim() === r.old) t.sheet.getRange(i + 1, col + 1).setValue(r.name);
+    });
+    var sh = deptSheet_(true);
+    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 5).clearContent();
+    sh.getRange(2, 1, rows.length, 5).setValues(rows.map(function (r, i) { return [r.name, r.group, r.icon, r.color, i + 1]; }));
+    return { ok: true };
+  } finally { lock.releaseLock(); }
 }
 function addDept_(d) {
   d = d || {};
